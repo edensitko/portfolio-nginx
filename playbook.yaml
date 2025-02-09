@@ -1,0 +1,71 @@
+---
+- name: Install Docker and Run Docker Image
+  hosts: all
+  become: yes
+  tasks:
+    - name: Update apt cache (for Ubuntu)
+      apt:
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Install required system packages
+      package:
+        name: 
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+          - python3-pip  # Install pip
+      when: ansible_os_family == "Debian"
+
+    - name: Add Docker's official GPG key
+      apt_key:
+        url: https://download.docker.com/linux/{{ ansible_distribution|lower }}/gpg
+      when: ansible_os_family == "Debian"
+
+    - name: Add Docker APT repository
+      apt_repository:
+        repo: deb [arch=amd64] https://download.docker.com/linux/{{ ansible_distribution|lower }} {{ ansible_distribution_release }} stable
+      when: ansible_os_family == "Debian"
+
+    - name: Update apt cache (for Ubuntu)
+      apt:
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Install Docker
+      apt:
+        name: docker-ce
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Install Docker python module for Python 3
+      pip:
+        name: docker
+        executable: pip3
+      tags:
+        - docker
+
+    - name: Remove existing container (if any)
+      docker_container:
+        name: my_container
+        state: absent
+      ignore_errors: yes
+      tags:
+        - docker
+
+    - name: Pull Docker image
+      docker_image:
+        name: "{{ docker_image }}"
+      register: docker_pull
+      tags:
+        - docker
+
+    - name: Run Docker container
+      docker_container:
+        name: my_container
+        image: "{{ docker_image }}"
+        state: started
+      tags:
+        - docker
